@@ -22,14 +22,19 @@ class CouponCommandService:
         description: Optional[str] = None,
         max_discount: Optional[Decimal | float | str] = None,
         max_uses: Optional[int] = None,
-        code: Optional[str] = None,
         event_name: Optional[str] = None,
         is_shared_alliances: bool = False,
         status: CouponStatus = CouponStatus.ACTIVE,
+        category_id: Optional[int] = None,
+        event_id: Optional[int] = None,
+        show_in_coupon_holder: bool = False,
     ) -> CouponData:
         entity = CouponData(
             business_id=business_id,
             coupon_type_id=coupon_type_id,
+            category_id=category_id,
+            event_id=event_id,
+            show_in_coupon_holder=show_in_coupon_holder,
             name=name,
             description=description,
             discount_type_id=discount_type_id,
@@ -38,7 +43,6 @@ class CouponCommandService:
             start_date=start_date,
             end_date=end_date,
             max_uses=max_uses,
-            code=code,
             event_name=event_name,
             is_shared_alliances=is_shared_alliances,
             status=status,
@@ -58,10 +62,12 @@ class CouponCommandService:
         description: Optional[str] = None,
         max_discount: Optional[Decimal | float | str] = None,
         max_uses: Optional[int] = None,
-        code: Optional[str] = None,
         event_name: Optional[str] = None,
         is_shared_alliances: bool = False,
         status: CouponStatus = CouponStatus.ACTIVE,
+        category_id: Optional[int] = None,
+        event_id: Optional[int] = None,
+        show_in_coupon_holder: bool = False,
     ) -> Optional[CouponData]:
         current = self.repo.get_by_id(id_)
         if not current:
@@ -69,6 +75,10 @@ class CouponCommandService:
 
         current.business_id = business_id
         current.coupon_type_id = coupon_type_id
+        current.category_id = category_id
+        current.event_id = event_id
+        current.show_in_coupon_holder = bool(show_in_coupon_holder)
+
         current.name = name
         current.description = description
         current.discount_type_id = discount_type_id
@@ -77,7 +87,6 @@ class CouponCommandService:
         current.start_date = start_date
         current.end_date = end_date
         current.max_uses = max_uses
-        current.code = code
         current.event_name = event_name
         current.is_shared_alliances = bool(is_shared_alliances)
         current.status = status

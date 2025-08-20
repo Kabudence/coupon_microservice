@@ -1,5 +1,5 @@
 from peewee import (
-    Model, ForeignKeyField, BigIntegerField, CompositeKey
+    Model, ForeignKeyField, BigIntegerField, CompositeKey, CharField, IntegerField
 )
 
 from coupons.coupon.infraestructure.model.coupon_model import CouponModel
@@ -13,9 +13,16 @@ class CouponProductModel(Model):
         backref='coupon_products',
         on_delete='CASCADE',
         null=False,
-        index=False  # <- clave para evitar el índice automático
+        index=False
     )
     product_id = BigIntegerField(null=False)
+
+    code = CharField(max_length=100, null=False)
+    product_type = CharField(max_length=16, null=False, choices=[("PRODUCT", "PRODUCT"), ("SERVICE", "SERVICE")])
+
+    # NUEVOS
+    stock = IntegerField(null=True)  # >=0, opcional
+    status = CharField(max_length=16, null=False, default="ACTIVE", choices=[("ACTIVE", "ACTIVE"), ("INACTIVE", "INACTIVE")])
 
     class Meta:
         database = db
@@ -24,5 +31,7 @@ class CouponProductModel(Model):
         indexes = (
             (('coupon',), False),
             (('product_id',), False),
+            (('code',), False),
+            (('product_type',), False),
+            (('status',), False),
         )
-

@@ -1,21 +1,25 @@
 import datetime
 from peewee import (
     Model, AutoField, BigIntegerField, CharField, BooleanField, IntegerField,
-    DecimalField, DateTimeField, ForeignKeyField, Index
+    DecimalField, DateTimeField, ForeignKeyField
 )
 
 from coupons.coupon.domain.entities.coupon import CouponStatus
 from coupons.coupons_type.infraestructure.model.coupon_type_model import CouponTypeModel
 from coupons.discount_type.infraestructure.model.discount_type_model import DiscountTypeModel
+from coupons.category.infraestructure.model.category_model import CategoryModel
+from coupons.event.infraestructure.model.event_model import EventModel
 from shared.infrastructure.database import db
-
 
 
 class CouponModel(Model):
     id = AutoField(primary_key=True)
 
-    business_id = BigIntegerField(null=False)             # FK -> business.id (use ForeignKeyField if you have BusinessModel)
+    business_id = BigIntegerField(null=False)
     coupon_type = ForeignKeyField(CouponTypeModel, field=CouponTypeModel.id, null=True, backref='coupons')
+
+    category = ForeignKeyField(CategoryModel, field=CategoryModel.id, null=True, backref='coupons')
+    event = ForeignKeyField(EventModel, field=EventModel.id, null=True, backref='coupons')
 
     name = CharField(max_length=100, null=False)
     description = CharField(max_length=255, null=True)
@@ -24,15 +28,15 @@ class CouponModel(Model):
     value = DecimalField(max_digits=12, decimal_places=2, auto_round=True, null=False)
     max_discount = DecimalField(max_digits=12, decimal_places=2, auto_round=True, null=True)
 
-    start_date = DateTimeField(null=False)                # UTC
-    end_date = DateTimeField(null=False)                  # UTC
+    start_date = DateTimeField(null=False)
+    end_date = DateTimeField(null=False)
 
-    max_uses = IntegerField(null=True)
+    max_uses = IntegerField(null=True)  # se mantiene en DB
 
-    code = CharField(max_length=50, unique=True, null=True)
     event_name = CharField(max_length=100, null=True)
-
     is_shared_alliances = BooleanField(default=False, null=False)
+
+    show_in_coupon_holder = BooleanField(default=False, null=False)
 
     status = CharField(
         max_length=16,
@@ -48,9 +52,10 @@ class CouponModel(Model):
         database = db
         table_name = 'coupon'
         indexes = (
-            (('business_id', 'status'), False),      # idx_coupon_business_status
-            (('status', 'start_date', 'end_date'), False),  # idx_coupon_validity
-            (('is_shared_alliances', 'status'), False),     # idx_coupon_shared
+            (('business_id', 'status'), False),
+            (('status', 'start_date', 'end_date'), False),
+            (('is_shared_alliances', 'status'), False),
+            (('business_id', 'show_in_coupon_holder'), False),
         )
 
     def save(self, *args, **kwargs):

@@ -1,7 +1,11 @@
 from typing import List
 
-from coupons.coupon_trigger_product.domain.entities.coupon_trigger_product import CouponTriggerProductData
-from coupons.coupon_trigger_product.infraestructure.model.coupon_trigger_product_model import CouponTriggerProductModel
+from coupons.coupon_trigger_product.domain.entities.coupon_trigger_product import (
+    CouponTriggerProductData, ProductType
+)
+from coupons.coupon_trigger_product.infraestructure.model.coupon_trigger_product_model import (
+    CouponTriggerProductModel
+)
 
 
 class CouponTriggerProductRepository:
@@ -9,24 +13,33 @@ class CouponTriggerProductRepository:
         try:
             CouponTriggerProductModel.create(
                 product_trigger_id=entity.product_trigger_id,
+                product_type=entity.product_type.value if isinstance(entity.product_type, ProductType) else str(entity.product_type),
                 coupon=entity.coupon_id,
                 min_quantity=entity.min_quantity,
                 min_amount=(str(entity.min_amount) if entity.min_amount is not None else None),
             )
         except Exception:
-            # composite PK duplicate -> ignore (idempotent upsert-like)
             pass
         return entity
 
-    def bulk_add(self, coupon_id: int, product_trigger_ids: List[int], min_quantity: int = 1, min_amount=None) -> List[CouponTriggerProductData]:
+    def bulk_add(
+        self,
+        coupon_id: int,
+        product_trigger_ids: List[int],
+        product_type: ProductType | str = "PRODUCT",     # <-- NUEVO (para todos)
+        min_quantity: int = 1,
+        min_amount=None
+    ) -> List[CouponTriggerProductData]:
         created: List[CouponTriggerProductData] = []
         if not product_trigger_ids:
             return created
+        ptype = product_type.value if isinstance(product_type, ProductType) else str(product_type)
         with CouponTriggerProductModel._meta.database.atomic():
             for pid in product_trigger_ids:
                 try:
                     CouponTriggerProductModel.create(
                         product_trigger_id=pid,
+                        product_type=ptype,
                         coupon=coupon_id,
                         min_quantity=min_quantity,
                         min_amount=(str(min_amount) if min_amount is not None else None),
@@ -35,12 +48,12 @@ class CouponTriggerProductRepository:
                         CouponTriggerProductData(
                             product_trigger_id=pid,
                             coupon_id=coupon_id,
+                            product_type=ptype,
                             min_quantity=min_quantity,
                             min_amount=min_amount,
                         )
                     )
                 except Exception:
-                    # ignore duplicates
                     pass
         return created
 
@@ -67,6 +80,7 @@ class CouponTriggerProductRepository:
             CouponTriggerProductData(
                 product_trigger_id=rec.product_trigger_id,
                 coupon_id=rec.coupon.id,
+                product_type=rec.product_type,          # <-- NUEVO
                 min_quantity=rec.min_quantity,
                 min_amount=rec.min_amount,
             )

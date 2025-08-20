@@ -15,9 +15,6 @@ class CouponQueryService:
     def list_all(self) -> List[CouponData]:
         return self.repo.get_all()
 
-    def find_by_code(self, code: str) -> Optional[CouponData]:
-        return self.repo.find_by_code(code)
-
     def find_by_business(self, business_id: int) -> List[CouponData]:
         return self.repo.find_by_business(business_id)
 

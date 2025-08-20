@@ -12,6 +12,9 @@ class CouponRepository:
             id=rec.id,
             business_id=rec.business_id,
             coupon_type_id=(rec.coupon_type.id if rec.coupon_type is not None else None),
+            category_id=(rec.category.id if rec.category is not None else None),
+            event_id=(rec.event.id if rec.event is not None else None),
+            show_in_coupon_holder=bool(rec.show_in_coupon_holder),
             name=rec.name,
             description=rec.description,
             discount_type_id=rec.discount_type.id,
@@ -20,7 +23,6 @@ class CouponRepository:
             start_date=rec.start_date,
             end_date=rec.end_date,
             max_uses=rec.max_uses,
-            code=rec.code,
             event_name=rec.event_name,
             is_shared_alliances=bool(rec.is_shared_alliances),
             status=CouponStatus(rec.status),
@@ -51,6 +53,9 @@ class CouponRepository:
         rec = CouponModel.create(
             business_id=coupon.business_id,
             coupon_type=coupon.coupon_type_id,
+            category=coupon.category_id,
+            event=coupon.event_id,
+            show_in_coupon_holder=coupon.show_in_coupon_holder,
             name=coupon.name,
             description=coupon.description,
             discount_type=coupon.discount_type_id,
@@ -59,7 +64,6 @@ class CouponRepository:
             start_date=coupon.start_date,
             end_date=coupon.end_date,
             max_uses=coupon.max_uses,
-            code=coupon.code,
             event_name=coupon.event_name,
             is_shared_alliances=coupon.is_shared_alliances,
             status=coupon.status.value if isinstance(coupon.status, CouponStatus) else str(coupon.status),
@@ -71,6 +75,9 @@ class CouponRepository:
             rec = CouponModel.get(CouponModel.id == coupon.id)
             rec.business_id = coupon.business_id
             rec.coupon_type = coupon.coupon_type_id
+            rec.category = coupon.category_id
+            rec.event = coupon.event_id
+            rec.show_in_coupon_holder = coupon.show_in_coupon_holder
             rec.name = coupon.name
             rec.description = coupon.description
             rec.discount_type = coupon.discount_type_id
@@ -79,7 +86,6 @@ class CouponRepository:
             rec.start_date = coupon.start_date
             rec.end_date = coupon.end_date
             rec.max_uses = coupon.max_uses
-            rec.code = coupon.code
             rec.event_name = coupon.event_name
             rec.is_shared_alliances = coupon.is_shared_alliances
             rec.status = coupon.status.value if isinstance(coupon.status, CouponStatus) else str(coupon.status)
@@ -95,15 +101,6 @@ class CouponRepository:
             return True
         except CouponModel.DoesNotExist:
             return False
-
-    def find_by_code(self, code: str) -> Optional[CouponData]:
-        if not code:
-            return None
-        try:
-            rec = CouponModel.get(CouponModel.code == code.strip())
-            return self._to_entity(rec)
-        except CouponModel.DoesNotExist:
-            return None
 
     def find_by_business(self, business_id: int) -> List[CouponData]:
         q = CouponModel.select().where(CouponModel.business_id == business_id)

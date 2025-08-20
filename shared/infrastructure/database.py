@@ -4,6 +4,7 @@ Database connection + table-creation helpers.
 """
 
 from peewee import MySQLDatabase, SQL  # SQL para constraints / expresiones crudas
+
 from shared.infrastructure.db_config import DB_CONFIG
 
 
@@ -38,6 +39,10 @@ def init_db() -> None:
     from coupons.discount_type.infraestructure.model.discount_type_model import DiscountTypeModel
     from coupons.product_coupon.infraestructure.model.coupon_product_model import CouponProductModel
     from coupons.segmentation.infraestructure.model.segment_model import SegmentModel
+    from coupons.alianza.infraestructure.model.alianza_model import AlianzaModel
+    from coupons.category.infraestructure.model.category_model import CategoryModel
+    from coupons.event.infraestructure.model.event_model import EventModel
+    from coupons.coupons_client.infraestructure.model.coupon_client_model import CouponClientModel
 
     # ------------ CREAR TABLAS ---------------
     db.create_tables(
@@ -56,6 +61,10 @@ def init_db() -> None:
             # Segmentation
             SegmentModel,
             CouponSegmentPriceModel,
+            AlianzaModel,
+            CategoryModel,
+            EventModel,
+            CouponClientModel,
         ],
         safe=True,
     )
