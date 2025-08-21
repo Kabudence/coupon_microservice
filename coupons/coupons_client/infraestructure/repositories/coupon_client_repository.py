@@ -2,10 +2,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from coupons.coupon_client.domain.entities.coupon_client import (
-    CouponClientData, CouponClientStatus
-)
-from coupons.coupon_client.infraestructure.model.coupon_client_model import CouponClientModel
+from coupons.coupons_client.domain.entities.cupon_client import CouponClientData, CouponClientStatus
+from coupons.coupons_client.infraestructure.model.coupon_client_model import CouponClientModel
 
 
 class CouponClientRepository:

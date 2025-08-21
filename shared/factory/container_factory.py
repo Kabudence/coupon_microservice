@@ -20,6 +20,9 @@ from coupons.coupon_segment_price.infraestructure.repositories.coupon_segment_pr
 from coupons.coupon_trigger_product.application.command.coupon_trigger_product_command_service import CouponTriggerProductCommandService
 from coupons.coupon_trigger_product.application.queries.coupon_trigger_product_query_service import CouponTriggerProductQueryService
 from coupons.coupon_trigger_product.infraestructure.repositories.coupon_trigger_product_repository import CouponTriggerProductRepository
+from coupons.coupons_client.application.command.coupon_client_command_service import CouponClientCommandService
+from coupons.coupons_client.application.queries.coupon_client_query_service import CouponClientQueryService
+from coupons.coupons_client.infraestructure.repositories.coupon_client_repository import CouponClientRepository
 
 from coupons.coupons_type.application.command.coupon_type_command_service import CouponTypeCommandService
 from coupons.coupons_type.application.queries.coupon_type_query_service import CouponTypeQueryService
@@ -37,11 +40,9 @@ from coupons.event.infraestructure.repositories.event_repository import EventRep
 from coupons.product_coupon.application.command.coupon_product_command_service import CouponProductCommandService
 from coupons.product_coupon.application.queries.coupon_product_query_service import CouponProductQueryService
 from coupons.product_coupon.infraestructure.repositories.coupon_product_repository import CouponProductRepository
-
-# ---- CLIENT COUPON (cupones personalizados por cliente) ----
-from coupons.coupon_client.application.command.coupon_client_command_service import CouponClientCommandService
-from coupons.coupon_client.application.queries.coupon_client_query_service import CouponClientQueryService
-from coupons.coupon_client.infraestructure.repositories.coupon_client_repository import CouponClientRepository
+from coupons.segmentation.application.command.segment_command_service import SegmentCommandService
+from coupons.segmentation.application.queries.segment_query_service import SegmentQueryService
+from coupons.segmentation.infraestructure.repositories.segment_repository import SegmentRepository
 
 
 def build_coupon_services():

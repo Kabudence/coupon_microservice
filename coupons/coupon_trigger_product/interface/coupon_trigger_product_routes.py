@@ -53,16 +53,6 @@ def _parse_product_type(data: dict) -> str:
 
 @coupon_trigger_product_bp.route("", methods=["POST"])
 def add_mapping():
-    """
-    Body JSON:
-    {
-      "product_trigger_id": 777,
-      "coupon_id": 123,
-      "product_type": "PRODUCT" | "SERVICE",  # <-- NUEVO (obligatorio)
-      "min_quantity": 1,                      # opcional
-      "min_amount":  null                     # opcional
-    }
-    """
     cmd, _qry = _svc()
     data = request.get_json(silent=True) or {}
     try:
@@ -77,7 +67,7 @@ def add_mapping():
         created = cmd.add_mapping(
             product_trigger_id=product_trigger_id,
             coupon_id=coupon_id,
-            product_type=product_type,         # <-- NUEVO
+            product_type=product_type,
             min_quantity=min_quantity,
             min_amount=min_amount,
         )
@@ -90,16 +80,6 @@ def add_mapping():
 
 @coupon_trigger_product_bp.route("/bulk", methods=["POST"])
 def bulk_add_mappings():
-    """
-    Body JSON:
-    {
-      "coupon_id": 123,
-      "product_trigger_ids": [777, 778, 779],
-      "product_type": "PRODUCT" | "SERVICE",  # <-- NUEVO (para todos)
-      "min_quantity": 1,                      # opcional
-      "min_amount": null                      # opcional
-    }
-    """
     cmd, _qry = _svc()
     data = request.get_json(silent=True) or {}
     try:
@@ -119,7 +99,7 @@ def bulk_add_mappings():
         created_list = cmd.bulk_add_mappings(
             coupon_id=coupon_id,
             product_trigger_ids=product_trigger_ids,
-            product_type=product_type,         # <-- NUEVO
+            product_type=product_type,
             min_quantity=min_quantity,
             min_amount=min_amount,
         )
@@ -152,10 +132,6 @@ def list_coupons_by_trigger(product_trigger_id: int):
 
 @coupon_trigger_product_bp.route("", methods=["DELETE"])
 def remove_mapping():
-    """
-    Body JSON:
-    { "product_trigger_id": 777, "coupon_id": 123 }
-    """
     cmd, _qry = _svc()
     data = request.get_json(silent=True) or {}
     try:
@@ -178,5 +154,94 @@ def remove_all_for_coupon(coupon_id: int):
     try:
         deleted_count = cmd.remove_all_for_coupon(coupon_id)
         return jsonify({"deleted_count": deleted_count}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# =============== NUEVO: Resolver triggers por ítems comprados ===============
+@coupon_trigger_product_bp.route("/by-items", methods=["POST", "OPTIONS"])
+def resolve_triggers_by_items():
+    """
+    Dado un listado de ítems comprados (PRODUCT / SERVICE), devuelve
+    los mappings que aplican, respetando min_quantity / min_amount.
+    Body:
+    {
+      "business_id": 22,            # opcional
+      "items": [
+        {"product_type":"PRODUCT","product_id":123,"quantity":2,"amount":"49.90"},
+        ...
+      ]
+    }
+    """
+    if request.method == "OPTIONS":
+        # Respuesta vacía para preflight CORS
+        return ("", 200, {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+        })
+
+    _cmd, qry = _svc()
+    data = request.get_json(silent=True) or {}
+    try:
+        raw_items = data.get("items")
+        if not isinstance(raw_items, list) or not raw_items:
+            raise ValueError("items must be a non-empty list")
+
+        resolved = []
+        seen = set()  # evitar duplicados (product_id, coupon_id, product_type)
+
+        for it in raw_items:
+            if not isinstance(it, dict):
+                continue
+
+            ptype = _parse_product_type(it)
+            pid = it.get("product_id", it.get("id"))
+            product_id = _require_positive_int(pid, "product_id")
+
+            qty = int(it.get("quantity", 1))
+            if qty < 1:
+                qty = 1
+            amount = _optional_decimal(it.get("amount"), "amount")
+
+            # asumimos product_trigger_id == product_id
+            mappings = qry.list_coupons_by_trigger(product_id)
+
+            for m in mappings:
+                md = m if isinstance(m, dict) else m.to_dict()
+                m_ptype = (md.get("product_type") or "PRODUCT").upper()
+                if m_ptype not in ("PRODUCT", "SERVICE"):
+                    m_ptype = "PRODUCT"
+
+                if m_ptype != ptype:
+                    continue
+
+                min_q = int(md.get("min_quantity") or 1)
+                min_a = md.get("min_amount")
+                min_a = Decimal(str(min_a)) if min_a is not None else None
+
+                if qty < min_q:
+                    continue
+                if min_a is not None and (amount is None or amount < min_a):
+                    continue
+
+                coupon_id = _require_positive_int(md.get("coupon_id"), "coupon_id")
+                key = (product_id, coupon_id, ptype)
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                resolved.append({
+                    "product_type": ptype,
+                    "product_id": product_id,
+                    "coupon_id": coupon_id,
+                    "min_quantity": min_q,
+                    "min_amount": str(min_a) if min_a is not None else None
+                })
+
+        return jsonify(resolved), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
