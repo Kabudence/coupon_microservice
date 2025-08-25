@@ -158,7 +158,6 @@ def remove_all_for_coupon(coupon_id: int):
         return jsonify({"error": str(e)}), 500
 
 
-# =============== NUEVO: Resolver triggers por ítems comprados ===============
 @coupon_trigger_product_bp.route("/by-items", methods=["POST", "OPTIONS"])
 def resolve_triggers_by_items():
     """
@@ -205,14 +204,28 @@ def resolve_triggers_by_items():
             amount = _optional_decimal(it.get("amount"), "amount")
 
             # asumimos product_trigger_id == product_id
-            mappings = qry.list_coupons_by_trigger(product_id)
+            mappings = qry.list_coupons_by_trigger(product_id) or []
 
             for m in mappings:
-                md = m if isinstance(m, dict) else m.to_dict()
-                m_ptype = (md.get("product_type") or "PRODUCT").upper()
+                # Normaliza: acepta dict, entidad con .to_dict(), o entero (solo coupon_id)
+                if isinstance(m, dict):
+                    md = m
+                elif hasattr(m, "to_dict"):
+                    md = m.to_dict()
+                elif isinstance(m, (int, str)):
+                    # El repo devolvió solo el coupon_id; completa con defaults
+                    md = {
+                        "coupon_id": int(m),
+                        "product_type": ptype,  # asumimos mismo tipo del item evaluado
+                        "min_quantity": 1,
+                        "min_amount": None,
+                    }
+                else:
+                    continue
+
+                m_ptype = str((md.get("product_type") or "PRODUCT")).upper()
                 if m_ptype not in ("PRODUCT", "SERVICE"):
                     m_ptype = "PRODUCT"
-
                 if m_ptype != ptype:
                     continue
 
