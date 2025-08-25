@@ -40,7 +40,7 @@ class PaymentSourceData:
         if self.provider_customer_pk is None:
             raise ValueError("provider_customer_pk es requerido")
 
-        # Normalizar enums si vienen como string
+        # Normalizar enums.py si vienen como string
         if not isinstance(self.provider, ProviderEnum):
             self.provider = ProviderEnum(str(self.provider))
         if not isinstance(self.env, EnvEnum):

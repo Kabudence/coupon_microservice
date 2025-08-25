@@ -43,6 +43,32 @@ from coupons.product_coupon.infraestructure.repositories.coupon_product_reposito
 from coupons.segmentation.application.command.segment_command_service import SegmentCommandService
 from coupons.segmentation.application.queries.segment_query_service import SegmentQueryService
 from coupons.segmentation.infraestructure.repositories.segment_repository import SegmentRepository
+from payment.checkout.application.command.checkout_session_command_service import CheckoutSessionCommandService
+from payment.checkout.application.queries.checkout_session_query_service import CheckoutSessionQueryService
+from payment.checkout.infraestructure.repositories.checkout_session_repository import CheckoutSessionRepository
+from payment.orders.application.command.order_command_service import OrderCommandService
+from payment.orders.application.queries.order_query_service import OrderQueryService
+from payment.orders.infraestructure.repositories.order_repository import OrderRepository
+from payment.party.application.command.party_command_service import PartyCommandService
+from payment.party.application.queries.party_query_service import PartyQueryService
+from payment.party.infraestructure.repositories.party_repository import PartyRepository
+from payment.provider.customer_sources.application.command.payment_source_command_service import \
+    PaymentSourceCommandService
+from payment.provider.customer_sources.infraestructure.repositories.payment_source_repository import \
+    PaymentSourceRepository
+from payment.provider.provider_account.application.command.provider_account_command_service import \
+    ProviderAccountCommandService
+from payment.provider.provider_account.application.queries.provider_account_query_service import \
+    ProviderAccountQueryService
+from payment.provider.provider_account.infraestructure.repositories.provider_account_repository import \
+    ProviderAccountRepository
+from payment.provider.provider_customer.application.command.provider_customer_command_service import \
+    ProviderCustomerCommandService
+from payment.provider.provider_customer.infraestructure.repositories.provider_customer_repository import \
+    ProviderCustomerRepository
+from payment.webhook.application.command.webhook_event_command_service import WebhookEventCommandService
+from payment.webhook.application.queries.webhook_event_query_service import WebhookEventQueryService
+from payment.webhook.infraestructure.repositories.webhook_event_repository import WebhookEventRepository
 
 
 def build_coupon_services():
@@ -62,6 +88,31 @@ def build_coupon_services():
 
     alianza_repo = AlianzaRepository()
 
+
+
+
+
+    webhook_repo= WebhookEventRepository()
+    webhook_command_service = WebhookEventCommandService(webhook_repo)
+    webhook_query_service = WebhookEventQueryService(webhook_repo)
+    checkout_session_repo =  CheckoutSessionRepository()
+    checkout_session_command_service = CheckoutSessionCommandService(checkout_session_repo)
+    checkout_session_query_service = CheckoutSessionQueryService(checkout_session_repo)
+    orders_repo = OrderRepository()
+    order_query_service = OrderQueryService(orders_repo)
+    order_command_service = OrderCommandService(orders_repo)
+    party_repository = PartyRepository()
+    party_query_service = PartyQueryService(party_repository)
+    party_command_service =PartyCommandService(party_repository)
+    payment_source_repo = PaymentSourceRepository()
+    payment_source_command_service = PaymentSourceCommandService(payment_source_repo)
+    payment_source_query_service = PaymentSourceCommandService(payment_source_repo)
+    provider_account_repository = ProviderAccountRepository()
+    provider_account_command_service = ProviderAccountCommandService(provider_account_repository)
+    provider_account_query_service = ProviderAccountQueryService(provider_account_repository)
+    provider_customer_repo =ProviderCustomerRepository()
+    provider_customer_command_service = ProviderCustomerCommandService(provider_customer_repo)
+    provider_customer_query_service = ProviderCustomerCommandService(provider_customer_repo)
     # ---------- SERVICES ----------
     # Catálogos
     discount_type_command_service = DiscountTypeCommandService(discount_type_repo)
@@ -156,4 +207,23 @@ def build_coupon_services():
         "event_repo": event_repo,
         "alianza_repo": alianza_repo,
         "coupon_client_repo": coupon_client_repo,
+
+
+
+
+
+        "webhook_command_service": webhook_command_service,
+        "webhook_query_service": webhook_query_service,
+        "checkout_session_command_service": checkout_session_command_service,
+        "checkout_session_query_service": checkout_session_query_service,
+        "order_command_service": order_command_service,
+        "order_query_service": order_query_service,
+        "party_command_service": party_command_service,
+        "party_query_service": party_query_service,
+        "payment_source_command_service": payment_source_command_service,
+        "payment_source_query_service": payment_source_query_service,
+        "provider_account_command_service": provider_account_command_service,
+        "provider_account_query_service": provider_account_query_service,
+        "provider_customer_command_service": provider_customer_command_service,
+        "provider_customer_query_service": provider_customer_query_service,
     }
