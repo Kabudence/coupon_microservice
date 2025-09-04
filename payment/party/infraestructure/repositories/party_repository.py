@@ -1,7 +1,8 @@
 from typing import Optional, List, Iterable
 from peewee import IntegrityError, fn
-from shared.party.domain.entities.party import PartyData, PartySubjectType, PartyAppName
-from shared.party.infraestructure.model.party_model import PartyModel
+
+from payment.party.domain.entities.party import PartyData, PartyAppName, PartySubjectType
+from payment.party.infraestructure.model.party_model import PartyModel
 
 
 class PartyRepository:

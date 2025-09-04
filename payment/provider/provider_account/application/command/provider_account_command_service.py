@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Optional, Union, Dict, Any
 
-from payment.provider.provider_account import ProviderKind, EnvKind, ProviderAccountStatus,ProviderAccountData
-from payment.provider.provider_account.infraestructure.repositories import ProviderAccountRepository
+from payment.provider.provider_account.domain.entities.provider_account import ProviderKind, EnvKind, \
+    ProviderAccountStatus, ProviderAccountData
+from payment.provider.provider_account.infraestructure.repositories.provider_account_repository import \
+    ProviderAccountRepository
 
 
 class ProviderAccountCommandService:

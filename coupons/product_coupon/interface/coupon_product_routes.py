@@ -1,4 +1,4 @@
-# coupons/product_coupon/interfaces/coupon_product_http.py
+# coupons/product_coupon/interface/coupon_product_http.py
 from __future__ import annotations
 from typing import Any, List, Optional, Dict
 from flask import Blueprint, request, jsonify, current_app

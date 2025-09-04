@@ -1,7 +1,10 @@
 from typing import Optional, List, Dict, Any
 
-from payment.provider.provider_account import ProviderKind, EnvKind,ProviderAccountData
-from payment.provider.provider_account.infraestructure.repositories import ProviderAccountRepository
+from payment.provider.provider_account.domain.entities.provider_account import ProviderAccountData, ProviderKind, \
+    EnvKind
+from payment.provider.provider_account.infraestructure.repositories.provider_account_repository import \
+    ProviderAccountRepository
+
 
 class ProviderAccountQueryService:
     def __init__(self, repo: ProviderAccountRepository):

@@ -4,12 +4,10 @@ import json
 from typing import Optional, List, Dict, Any, Union
 
 from peewee import fn
-from playhouse.shortcuts import model_to_dict
 
-from payments.provider_accounts.domain.entities.provider_account import (
-    ProviderAccountData, ProviderKind, EnvKind, ProviderAccountStatus
-)
-from payments.provider_accounts.infraestructure.model.provider_account_model import ProviderAccountModel
+from payment.provider.provider_account.domain.entities.provider_account import ProviderAccountData, ProviderKind, \
+    EnvKind, ProviderAccountStatus
+from payment.provider.provider_account.infraestructure.model.provider_account_model import ProviderAccountModel
 
 
 class ProviderAccountRepository:
@@ -175,31 +173,6 @@ class ProviderAccountRepository:
             return self.update(data) or existing
         return self.create(data)
 
-    # -------------------------
-    # Búsquedas útiles / analytics
-    # -------------------------
-    def count_by_provider_env(self) -> List[Dict[str, Any]]:
-        q = (ProviderAccountModel
-             .select(
-                 ProviderAccountModel.provider,
-                 ProviderAccountModel.env,
-                 fn.COUNT(ProviderAccountModel.id).alias("total")
-             )
-             .group_by(ProviderAccountModel.provider, ProviderAccountModel.env))
-        out = []
-        for r in q:
-            out.append({
-                "provider": r.provider,
-                "env": r.env,
-                "total": r.total
-            })
-        return out
 
-    def dump_model(self, id_: int) -> Optional[Dict[str, Any]]:
-        """Devuelve el registro crudo (útil para debug)."""
-        try:
-            rec = ProviderAccountModel.get(ProviderAccountModel.id == id_)
-            d = model_to_dict(rec)
-            return d
-        except ProviderAccountModel.DoesNotExist:
-            return None
+
+
