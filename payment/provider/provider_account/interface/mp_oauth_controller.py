@@ -1,6 +1,7 @@
+# payment/provider/provider_account/interface/mp_oauth_controller.py
 from __future__ import annotations
 
-import os, base64, json, time, hashlib, secrets
+import os, base64, json, time
 from urllib.parse import urlencode
 
 import requests
@@ -16,26 +17,8 @@ from payment.provider.provider_account.domain.entities.provider_account import (
     EnvKind, ProviderKind, ProviderAccountStatus
 )
 
-# ====== PKCE: guardamos code_verifier por state en memoria (para demo).
-# En producción usa Redis / KV con TTL.
-_STATE: dict[str, dict] = {}  # state -> {"code_verifier": str, "exp": int}
-_STATE_TTL = 10 * 60  # 10 minutos
 
-
-def _put_state(state: str, code_verifier: str):
-    _STATE[state] = {"code_verifier": code_verifier, "exp": int(time.time()) + _STATE_TTL}
-
-
-def _pop_verifier(state: str) -> str | None:
-    d = _STATE.pop(state, None)
-    if not d or d["exp"] < int(time.time()):
-        return None
-    return d["code_verifier"]
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
-
+# ----------------- Helpers -----------------
 
 def _get_services() -> tuple[ProviderAccountCommandService, ProviderAccountQueryService]:
     services = current_app.config.get("services") or {}
@@ -54,33 +37,42 @@ def _env_kind(env_str: str) -> EnvKind:
         raise ValueError(f"env inválido: {env_str}")
 
 
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
+
+
 def _pack_state(party_id: int, env: str) -> str:
     raw = json.dumps({"party_id": party_id, "env": env}, separators=(",", ":")).encode("utf-8")
     return _b64url(raw)
 
 
 def _unpack_state(state: str) -> dict:
-    raw = base64.urlsafe_b64decode(state + "===")  # padding tolerante
+    # agrega padding por si hizo strip
+    pad = "=" * ((4 - len(state) % 4) % 4)
+    raw = base64.urlsafe_b64decode((state + pad).encode("utf-8"))
     return json.loads(raw.decode("utf-8"))
 
 
 def _cfg_for_env(env: EnvKind) -> dict:
-    # Solo client_id (PKCE no usa client_secret)
     if env == EnvKind.TEST:
         return {
             "client_id": current_app.config.get("MP_CLIENT_ID_TEST") or os.getenv("MP_CLIENT_ID_TEST"),
+            "client_secret": current_app.config.get("MP_CLIENT_SECRET_TEST") or os.getenv("MP_CLIENT_SECRET_TEST"),
         }
     return {
         "client_id": current_app.config.get("MP_CLIENT_ID_PROD") or os.getenv("MP_CLIENT_ID_PROD"),
+        "client_secret": current_app.config.get("MP_CLIENT_SECRET_PROD") or os.getenv("MP_CLIENT_SECRET_PROD"),
     }
 
 
+# ----------------- Blueprint -----------------
+
 def create_mp_oauth_blueprint() -> Blueprint:
     """
-    PKCE only:
-      GET  /connect?party_id=<int>&env=test|prod  -> redirige a MP con code_challenge (S256)
-      GET  /callback?code=...&state=...          -> token exchange (code_verifier) + upsert provider_account
-      POST /refresh/<account_id>                 -> refresh_token sin client_secret (puede fallar si tu app no es 'public client')
+    OAuth (Authorization Code) con client_secret (sin PKCE):
+      GET  /connect?party_id=<int>&env=test|prod  -> redirige a MP
+      GET  /callback?code=...&state=...          -> token exchange (client_id + client_secret) + upsert provider_account
+      POST /refresh/<account_id>                 -> refresh_token (client_secret)
     """
     bp = Blueprint("mp_oauth", __name__)
 
@@ -101,31 +93,24 @@ def create_mp_oauth_blueprint() -> Blueprint:
         cfg = _cfg_for_env(env)
 
         client_id = cfg["client_id"]
+        client_secret = cfg["client_secret"]
         redirect_uri = current_app.config.get("MP_REDIRECT_URI") or os.getenv("MP_REDIRECT_URI")
 
-        if not client_id or not redirect_uri:
-            return jsonify(ok=False, error="Config incompleta: MP_CLIENT_ID_* o MP_REDIRECT_URI"), 500
+        if not client_id or not client_secret or not redirect_uri:
+            return jsonify(ok=False, error="Config incompleta: MP_CLIENT_ID_*, MP_CLIENT_SECRET_*, MP_REDIRECT_URI"), 500
 
         state = _pack_state(party_id, env.value)
 
-        # Base de autorización
+        # URL base de autorización
         auth_base = current_app.config.get("MP_AUTH_BASE_URL") or os.getenv("MP_AUTH_BASE_URL") or \
                     "https://auth.mercadopago.com/authorization"
-
-        # PKCE: code_verifier + challenge S256
-        code_verifier = _b64url(secrets.token_urlsafe(64).encode("utf-8"))
-        challenge = _b64url(hashlib.sha256(code_verifier.encode("utf-8")).digest())
-        _put_state(state, code_verifier)
 
         params = {
             "client_id": client_id,
             "response_type": "code",
             "redirect_uri": redirect_uri,
             "state": state,
-            "code_challenge": challenge,
-            "code_challenge_method": "S256",
         }
-
         url = f"{auth_base}?{urlencode(params)}"
         return redirect(url, code=302)
 
@@ -146,27 +131,24 @@ def create_mp_oauth_blueprint() -> Blueprint:
 
         cfg = _cfg_for_env(env)
         client_id = cfg["client_id"]
+        client_secret = cfg["client_secret"]
         redirect_uri = current_app.config.get("MP_REDIRECT_URI") or os.getenv("MP_REDIRECT_URI")
+
         token_url = current_app.config.get("MP_TOKEN_URL") or os.getenv("MP_TOKEN_URL") or \
                     "https://api.mercadopago.com/oauth/token"
         api_base = current_app.config.get("MP_API_BASE_URL") or os.getenv("MP_API_BASE_URL") or \
                    "https://api.mercadopago.com"
 
-        if not client_id or not redirect_uri:
+        if not client_id or not client_secret or not redirect_uri:
             return jsonify(ok=False, error="Config OAuth incompleta"), 500
 
-        code_verifier = _pop_verifier(state)
-        if not code_verifier:
-            return jsonify(ok=False, error="missing_code_verifier",
-                           details="PKCE: no se encontró code_verifier (reinicio del server o state vencido)"), 400
-
-        # ----- 1) Intercambio de code -> tokens (PKCE, sin client_secret)
+        # ----- 1) Intercambio de code -> tokens (client_secret)
         payload = {
             "grant_type": "authorization_code",
             "client_id": client_id,
+            "client_secret": client_secret,
             "code": code,
             "redirect_uri": redirect_uri,
-            "code_verifier": code_verifier,
         }
         r = requests.post(token_url, data=payload, timeout=30)
         if r.status_code >= 400:
@@ -201,6 +183,7 @@ def create_mp_oauth_blueprint() -> Blueprint:
             "refresh_token": refresh_token,
             "expires_at": expires_at,
             "client_id": client_id,
+            "client_secret": client_secret,
             "collector_id": collector_id,
         }
 
@@ -218,8 +201,6 @@ def create_mp_oauth_blueprint() -> Blueprint:
 
     @bp.route("/refresh/<int:account_id>", methods=["POST"])
     def refresh(account_id: int):
-        # IMPORTANTE: algunos tenants de MP exigen client_secret para refresh.
-        # Este endpoint intenta refresh sin secret (public client). Si MP lo requiere, devolverá error.
         cmd, qry = _get_services()
         entity = qry.get_by_id(account_id)
         if not entity:
@@ -228,6 +209,7 @@ def create_mp_oauth_blueprint() -> Blueprint:
         env = entity.env if hasattr(entity.env, "value") else EnvKind(str(entity.env))
         cfg = _cfg_for_env(env)
         client_id = cfg["client_id"]
+        client_secret = cfg["client_secret"]
         token_url = current_app.config.get("MP_TOKEN_URL") or os.getenv("MP_TOKEN_URL") or \
                     "https://api.mercadopago.com/oauth/token"
 
@@ -239,6 +221,7 @@ def create_mp_oauth_blueprint() -> Blueprint:
         payload = {
             "grant_type": "refresh_token",
             "client_id": client_id,
+            "client_secret": client_secret,
             "refresh_token": refresh_token,
         }
         r = requests.post(token_url, data=payload, timeout=30)

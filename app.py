@@ -38,7 +38,11 @@ def create_app() -> Flask:
     # Config necesaria para OAuth PKCE
     app.config.update(
         MP_CLIENT_ID_TEST=os.getenv("MP_CLIENT_ID_TEST"),
+        MP_CLIENT_SECRET_TEST=os.getenv("MP_CLIENT_SECRET_TEST"),
+
+        # Por conveniencia: si no defines PROD, usa TEST (mismo app id/secret)
         MP_CLIENT_ID_PROD=os.getenv("MP_CLIENT_ID_PROD") or os.getenv("MP_CLIENT_ID_TEST"),
+        MP_CLIENT_SECRET_PROD=os.getenv("MP_CLIENT_SECRET_PROD") or os.getenv("MP_CLIENT_SECRET_TEST"),
 
         MP_REDIRECT_URI=os.getenv("MP_REDIRECT_URI"),
 
